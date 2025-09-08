@@ -1,141 +1,93 @@
-import { useState } from "react";
-import "./App.css"; // import the CSS file
+import React, { useState } from 'react';
+import './App.css';
 
-export default function App() {
-  const [city, setCity] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
+const App = () => {
+  const [city , setCity] = useState("");
+  const [coords, setCoords] = useState(null);
+  const [error, setError] = useState(null);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  async function handleSearch() {
-    const q = city.trim();
-    if (!q) {
-      setError("Please enter a city name");
-      return;
-    }
+  const handleInput = (e) => {
+    setCity(e.target.value);
+  };
 
-    setError("");
-    setWeather(null);
-    setSuggestions([]);
+  const fetchCord = async () => {
     setLoading(true);
+    setError(null);
+    setCoords(null);
+    setWeather(null);
 
     try {
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10`
-      );
-      const geoData = await geoRes.json();
+      const data = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=5&appid=a6cc5b989a4ac84c02a775bd4dbd86a6`);
+      const json = await data.json();
 
-      if (!geoData.results || geoData.results.length === 0) {
+      if (json.length === 0) {
         setError("City not found");
         setLoading(false);
         return;
       }
 
-      const indiaResults = geoData.results.filter((place) => place.country === "India");
+      const { lat, lon } = json[0];
+      setCoords({ lat, lon });
 
-      if (indiaResults.length === 0) {
-        setError("No Indian city found with this name");
-        setLoading(false);
-        return;
-      }
+      const weatherData = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=a6cc5b989a4ac84c02a775bd4dbd86a6`);
+      const weatherJson = await weatherData.json();
 
-      if (indiaResults.length === 1) {
-        await fetchWeatherForPlace(indiaResults[0]);
-      } else {
-        setSuggestions(indiaResults);
-      }
-    } catch (e) {
-      console.error(e);
-      setError("Failed to search locations");
+      const { temp , humidity } = weatherJson.main;
+      const { description, icon } = weatherJson.weather[0];
+
+      setWeather({ temperature: temp, description, icon ,humidity});
+    } catch (err) {
+      setError("Failed to fetch data");
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function fetchWeatherForPlace(place) {
-    setError("");
-    setLoading(true);
-    try {
-      const { latitude, longitude } = place;
-      const weatherRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=Asia%2FKolkata`
-      );
-      const weatherData = await weatherRes.json();
-
-      setWeather({
-        city: place.name,
-        admin1: place.admin1 || "",
-        country: place.country || "",
-        latitude,
-        longitude,
-        ...weatherData.current_weather,
-      });
-      setSuggestions([]);
-    } catch (e) {
-      console.error(e);
-      setError("Failed to load weather");
-    } finally {
-      setLoading(false);
-    }
-  }
+  };
 
   return (
-    <div className="container">
-      <h1>Weather App</h1>
-
-      <div className="search-box">
-        <input
+    <div className="app-container">
+      <div className="overlay">
+        <h1 className="title">Weather App coderwing</h1>
+        <input 
+          type="text"
+          placeholder="Enter a city name"
           value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="Enter city (e.g. Indore)"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSearch();
-          }}
+          onChange={handleInput}
+          className="city-input"
         />
-        <button onClick={handleSearch} disabled={loading}>
-          {loading ? "Searching..." : "Get Weather"}
+        <button
+          onClick={fetchCord}
+          disabled={loading}
+          className="fetch-btn"
+        >
+          {loading ? 'Loading...' : 'Get Weather'}
         </button>
-      </div>
 
-      {error && <div className="error">{error}</div>}
+        {error && <p className="error-text">{error}</p>}
 
-      {suggestions.length > 0 && (
-        <div className="suggestions">
-          <div>Multiple places found — pick one:</div>
-          <ul>
-            {suggestions.map((place, idx) => (
-              <li key={idx}>
-                <button onClick={() => fetchWeatherForPlace(place)}>
-                  {place.name}
-                  {place.admin1 ? `, ${place.admin1}` : ""}
-                  {place.country ? `, ${place.country}` : ""}
-                  {place.latitude && place.longitude
-                    ? ` — (${place.latitude.toFixed(2)}, ${place.longitude.toFixed(2)})`
-                    : ""}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {coords && (
+          <p className="coords-text">
+            Coordinates — Lat: {coords.lat.toFixed(2)}, Lon: {coords.lon.toFixed(2)}
+          </p>
+        )}
 
-      {weather && (
-        <div className="weather-card">
-          <h3>
-            {weather.city}
-            {weather.admin1 ? `, ${weather.admin1}` : ""}{" "}
-            {weather.country ? `, ${weather.country}` : ""}
-          </h3>
-          <div>Temperature: {weather.temperature} °C</div>
-          <div>Windspeed: {weather.windspeed} km/h</div>
-          <div>Wind Direction: {weather.winddirection}°</div>
-          <div>Time: {weather.time}</div>
-          <div className="coords">
-            Lat: {weather.latitude}, Lon: {weather.longitude}
+        {weather && (
+          <div className="weather-info">
+            <p className="temp-text">Temperature: {weather.temperature}°C</p>
+            <p className="condition-text">{weather.description}</p>
+            <p className="humidity-text">Humidity: {weather.humidity}%</p>
+            <img
+              src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+              alt={weather.description}
+              className="weather-icon"
+            />
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default App;
