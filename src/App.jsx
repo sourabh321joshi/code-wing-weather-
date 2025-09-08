@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./App.css"; // import the CSS file
 
 export default function App() {
   const [city, setCity] = useState("");
@@ -21,9 +22,7 @@ export default function App() {
 
     try {
       const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-          q
-        )}&count=10`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10`
       );
       const geoData = await geoRes.json();
 
@@ -33,7 +32,6 @@ export default function App() {
         return;
       }
 
-      // FILTER only Indian cities
       const indiaResults = geoData.results.filter((place) => place.country === "India");
 
       if (indiaResults.length === 0) {
@@ -73,7 +71,7 @@ export default function App() {
         longitude,
         ...weatherData.current_weather,
       });
-      setSuggestions([]); // clear suggestions once user picked
+      setSuggestions([]);
     } catch (e) {
       console.error(e);
       setError("Failed to load weather");
@@ -83,15 +81,14 @@ export default function App() {
   }
 
   return (
-    <div style={{ padding: 20, fontFamily: "sans-serif", maxWidth: 700 }}>
-      <h1>Weather App </h1>
+    <div className="container">
+      <h1>Weather App</h1>
 
-      <div style={{ marginBottom: 12 }}>
+      <div className="search-box">
         <input
           value={city}
           onChange={(e) => setCity(e.target.value)}
           placeholder="Enter city (e.g. Indore)"
-          style={{ padding: 8, width: 300, marginRight: 8 }}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSearch();
           }}
@@ -101,18 +98,15 @@ export default function App() {
         </button>
       </div>
 
-      {error && <div style={{ color: "red", marginBottom: 10 }}>{error}</div>}
+      {error && <div className="error">{error}</div>}
 
       {suggestions.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 6 }}>Multiple places found — pick one:</div>
-          <ul style={{ paddingLeft: 18 }}>
+        <div className="suggestions">
+          <div>Multiple places found — pick one:</div>
+          <ul>
             {suggestions.map((place, idx) => (
-              <li key={idx} style={{ marginBottom: 6 }}>
-                <button
-                  onClick={() => fetchWeatherForPlace(place)}
-                  style={{ cursor: "pointer" }}
-                >
+              <li key={idx}>
+                <button onClick={() => fetchWeatherForPlace(place)}>
                   {place.name}
                   {place.admin1 ? `, ${place.admin1}` : ""}
                   {place.country ? `, ${place.country}` : ""}
@@ -127,16 +121,8 @@ export default function App() {
       )}
 
       {weather && (
-        <div
-          style={{
-            border: "1px solid #ddd",
-            padding: 12,
-            borderRadius: 6,
-            marginTop: 8,
-            maxWidth: 420,
-          }}
-        >
-          <h3 style={{ margin: "0 0 8px 0" }}>
+        <div className="weather-card">
+          <h3>
             {weather.city}
             {weather.admin1 ? `, ${weather.admin1}` : ""}{" "}
             {weather.country ? `, ${weather.country}` : ""}
@@ -145,7 +131,7 @@ export default function App() {
           <div>Windspeed: {weather.windspeed} km/h</div>
           <div>Wind Direction: {weather.winddirection}°</div>
           <div>Time: {weather.time}</div>
-          <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>
+          <div className="coords">
             Lat: {weather.latitude}, Lon: {weather.longitude}
           </div>
         </div>
